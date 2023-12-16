@@ -1,0 +1,70 @@
+def one_game(numOfPlayers, player0_alpha, other_players_alpha):
+    # generate the deck with 52 cards
+    deck = generate_cards()
+    # deal table cards
+    table = deal_table(deck)
+    # the tuple which includes hand cards of all players
+    hands = []
+    for j in range(numOfPlayers):
+        hand = deal_hand(deck)
+        hands.append(hand)
+
+    # the array to keep track of the players that do not fold due to low valued cards
+    players_not_fold = []
+    if hands[0][0].value >= player0_alpha and hands[0][1].value >= player0_alpha:
+        players_not_fold.append(0)
+    for j in range(0, numOfPlayers - 1):
+        if hands[j + 1][0].value >= other_players_alpha and hands[j + 1][1].value >= other_players_alpha:
+            players_not_fold.append(j + 1)
+
+    # the set to keep track of current winners
+    winners = set()
+    for j in range(numOfPlayers):
+        winners.add(j)
+    # compare all players hands and update the winners accordingly
+    for j in range(numOfPlayers):
+        for k in range(j + 1, numOfPlayers):
+            outcome = compare(hands[j], hands[k], table)
+            if outcome == 1:
+                winners.discard(k)
+            elif outcome == 2:
+                winners.discard(j)
+    return winners
+
+# number of games played
+numOfSimulations = 10000
+# stores minimum probability out of 10 runs for each alpha/alpha value
+mins = np.zeros((13, 13))
+# stores maximum probability out of 10 runs for each alpha/alpha value
+maxs = np.zeros((13, 13))
+# stores probabilities of player zero winning when strategy is alpha = 5
+# and other player's strategy is alpha = 10
+convergence = np.zeros((10, numOfSimulations + 1))
+
+# loop over the specified number of games played for 10 runs
+for a in range(10):
+    results = np.zeros((13, 13))
+    alphas = np.arange(2,15)
+    for i in alphas: # player zero strategy
+        for j in alphas: # other players' strategy
+            # loop through based on the number of games and
+            # find the winner for each game
+            if i == 5 and j == 10:
+                for k in range(numOfSimulations):
+                    winners = one_game(6, i, j)
+                    if 0 in winners:
+                        results[i - 2, j - 2] += 1
+                    convergence[a, k + 1] = results[i - 2, j - 2] / (k + 1)
+            else:
+                for k in range(numOfSimulations):
+                    winners = one_game(6, i, j)
+                    if 0 in winners:
+                        results[i - 2, j - 2] += 1
+    # calculates the probability that player zero wins
+    results = results / numOfSimulations
+    # loop through to find the min and max for the confidence
+    # interval for each alpha/alpha value
+    for i in alphas:
+        for j in alphas:
+            maxs[i - 2, j - 2] = max(maxs[i - 2, j - 2], results[i - 2, j - 2])
+            mins[i - 2, j - 2] = min(maxs[i - 2, j - 2], results[i - 2, j - 2])
